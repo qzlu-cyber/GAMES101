@@ -36,6 +36,30 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle) // 逐个元素地构建�
     return model;
 }
 
+// 绕任意过原点的轴的旋转变换矩阵
+Eigen::Matrix4f get_roation(Vector3f axis, float angle)
+{
+    float _angle = angle / 180 * MY_PI; // 角度转弧度
+
+    Eigen::Matrix3f I = Eigen::Matrix3f::Identity();
+
+    Eigen::Matrix3f A; // 旋转轴的反对称矩阵
+    A << 0, -axis[2], axis[1],
+        axis[2], 0, -axis[0],
+        -axis[1], axis[0], 0;
+
+    Eigen::MatrixXf R; // 旋转矩阵
+    R.resize(3, 3);
+    R << cos(_angle) * I + (1 - cos(_angle)) * axis * axis.transpose() + sin(_angle) * A;
+
+    R.conservativeResize(R.rows() + 1, R.cols() + 1); // 扩展矩阵
+    R.row(3).setZero(); // 设置第 4 行为 0
+    R.col(3).setZero(); // 设置第 4 列为 0
+    R(3, 3) = 1; // 设置第 4 行第 4 列为 1
+
+    return R;
+}
+
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
                                       float zNear, float zFar)
 {

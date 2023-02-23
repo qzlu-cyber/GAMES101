@@ -139,7 +139,7 @@ b = -t;
 ## 3. 结果
 
 <center>
-    <img src="./result1.jpg" width="45%">
+    <img src="./result1.jpg" width="40%">
     &emsp;&emsp;&emsp;
-    <img src="./result2.jpg" width="45%">
+    <img src="./result2.jpg" width="40%">
 </center>
