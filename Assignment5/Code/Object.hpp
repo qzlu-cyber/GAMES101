@@ -7,12 +7,12 @@ class Object
 {
 public:
     Object()
-        : materialType(DIFFUSE_AND_GLOSSY)
-        , ior(1.3)
-        , Kd(0.8)
-        , Ks(0.2)
-        , diffuseColor(0.2)
-        , specularExponent(25)
+        : materialType(DIFFUSE_AND_GLOSSY) // 材质类型
+        , ior(1.3) // 折射率
+        , Kd(0.8) // 漫反射系数
+        , Ks(0.2) // 镜面反射系数
+        , diffuseColor(0.2) // 漫反射颜色
+        , specularExponent(25) // 镜面反射指数
     {}
 
     virtual ~Object() = default;

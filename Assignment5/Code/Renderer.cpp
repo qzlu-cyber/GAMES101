@@ -14,7 +14,7 @@ Vector3f reflect(const Vector3f &I, const Vector3f &N)
 }
 
 // [comment]
-// Compute refraction direction using Snell's law
+// Compute refraction direction using Snell's law 折射定律
 //
 // We need to handle with care the two possible situations:
 //
@@ -26,15 +26,15 @@ Vector3f reflect(const Vector3f &I, const Vector3f &N)
 //
 // If the ray is inside, you need to invert the refractive indices and negate the normal N
 // [/comment]
-Vector3f refract(const Vector3f &I, const Vector3f &N, const float &ior)
+Vector3f refract(const Vector3f &I, const Vector3f &N, const float &ior) // I 是入射方向，N 是法线，ior 是折射率
 {
-    float cosi = clamp(-1, 1, dotProduct(I, N));
-    float etai = 1, etat = ior;
+    float cosi = clamp(-1, 1, dotProduct(I, N)); // 计算入射方向和法线夹角的余弦值，然后限制在 -1 到 1 之间
+    float etai = 1, etat = ior; // 两个介质的折射率，etai 是入射介质，etat 是折射介质
     Vector3f n = N;
-    if (cosi < 0) { cosi = -cosi; } else { std::swap(etai, etat); n= -N; }
-    float eta = etai / etat;
-    float k = 1 - eta * eta * (1 - cosi * cosi);
-    return k < 0 ? 0 : eta * I + (eta * cosi - sqrtf(k)) * n;
+    if (cosi < 0) { cosi = -cosi; } else { std::swap(etai, etat); n= -N; } // 判断入射方向是在介质内还是介质外，如果是介质外，交换两个介质的折射率，然后取反法线
+    float eta = etai / etat; // 计算两个折射率的比值
+    float k = 1 - eta * eta * (1 - cosi * cosi); // 判断是否存在全反射的情况。如果 k 小于 0，说明存在全反射，这时候折射光线不存在，函数返回一个长度为 0 的向量。否则，继续计算折射光线的方向。
+    return k < 0 ? 0 : eta * I + (eta * cosi - sqrtf(k)) * n; // 如果 k 小于 0，存在全反射折射光线不存在返回 0，否则返回折射方向
 }
 
 // [comment]
@@ -84,17 +84,17 @@ std::optional<hit_payload> trace(
         const Vector3f &orig, const Vector3f &dir,
         const std::vector<std::unique_ptr<Object> > &objects)
 {
-    float tNear = kInfinity;
-    std::optional<hit_payload> payload;
-    for (const auto & object : objects)
+    float tNear = kInfinity; // 起始最近距离，初始化为无穷大
+    std::optional<hit_payload> payload; // 用于存储光线与物体的交点信息
+    for (const auto & object : objects) // 遍历场景中的所有物体
     {
         float tNearK = kInfinity;
-        uint32_t indexK;
-        Vector2f uvK;
+        uint32_t indexK; // 三角形的索引
+        Vector2f uvK; // 交点在三角形上的 uv 坐标（纹理坐标）
         if (object->intersect(orig, dir, tNearK, indexK, uvK) && tNearK < tNear)
         {
-            payload.emplace();
-            payload->hit_obj = object.get();
+            payload.emplace(); // 如果光线与物体相交，就创建一个 hit_payload 对象
+            payload->hit_obj = object.get(); // 存储交点所在的物体
             payload->tNear = tNearK;
             payload->index = indexK;
             payload->uv = uvK;
@@ -126,34 +126,34 @@ Vector3f castRay(
         int depth)
 {
     if (depth > scene.maxDepth) {
-        return Vector3f(0.0,0.0,0.0);
+        return Vector3f(0.0,0.0,0.0); // 如果光线的深度超过了场景中最大深度，函数将返回一个黑色的颜色向量
     }
 
     Vector3f hitColor = scene.backgroundColor;
     if (auto payload = trace(orig, dir, scene.get_objects()); payload)
     {
-        Vector3f hitPoint = orig + dir * payload->tNear;
+        Vector3f hitPoint = orig + dir * payload->tNear; // 交点
         Vector3f N; // normal
         Vector2f st; // st coordinates
         payload->hit_obj->getSurfaceProperties(hitPoint, dir, payload->index, payload->uv, N, st);
         switch (payload->hit_obj->materialType) {
-            case REFLECTION_AND_REFRACTION:
+            case REFLECTION_AND_REFRACTION: // 如果物体既有反射又有折射
             {
-                Vector3f reflectionDirection = normalize(reflect(dir, N));
-                Vector3f refractionDirection = normalize(refract(dir, N, payload->hit_obj->ior));
+                Vector3f reflectionDirection = normalize(reflect(dir, N)); // 计算反射方向 
+                Vector3f refractionDirection = normalize(refract(dir, N, payload->hit_obj->ior)); // 计算折射方向
                 Vector3f reflectionRayOrig = (dotProduct(reflectionDirection, N) < 0) ?
                                              hitPoint - N * scene.epsilon :
-                                             hitPoint + N * scene.epsilon;
+                                             hitPoint + N * scene.epsilon; // 计算反射光线的起点
                 Vector3f refractionRayOrig = (dotProduct(refractionDirection, N) < 0) ?
                                              hitPoint - N * scene.epsilon :
-                                             hitPoint + N * scene.epsilon;
-                Vector3f reflectionColor = castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1);
-                Vector3f refractionColor = castRay(refractionRayOrig, refractionDirection, scene, depth + 1);
-                float kr = fresnel(dir, N, payload->hit_obj->ior);
-                hitColor = reflectionColor * kr + refractionColor * (1 - kr);
+                                             hitPoint + N * scene.epsilon; // 计算折射光线的起点
+                Vector3f reflectionColor = castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1); // 递归调用 castRay() 函数，计算反射光线的颜色
+                Vector3f refractionColor = castRay(refractionRayOrig, refractionDirection, scene, depth + 1); // 递归调用 castRay() 函数，计算折射光线的颜色
+                float kr = fresnel(dir, N, payload->hit_obj->ior); // 计算反射系数
+                hitColor = reflectionColor * kr + refractionColor * (1 - kr); // 混合反射和折射的颜色
                 break;
             }
-            case REFLECTION:
+            case REFLECTION: // 如果物体是反射物体
             {
                 float kr = fresnel(dir, N, payload->hit_obj->ior);
                 Vector3f reflectionDirection = reflect(dir, N);
@@ -163,38 +163,38 @@ Vector3f castRay(
                 hitColor = castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1) * kr;
                 break;
             }
-            default:
+            default: // 如果物体是漫反射物体
             {
                 // [comment]
                 // We use the Phong illumation model int the default case. The phong model
                 // is composed of a diffuse and a specular reflection component.
                 // [/comment]
-                Vector3f lightAmt = 0, specularColor = 0;
+                Vector3f lightAmt = 0, specularColor = 0; // lightAmt 用于存储漫反射光照，specularColor 用于存储镜面反射光照
                 Vector3f shadowPointOrig = (dotProduct(dir, N) < 0) ?
                                            hitPoint + N * scene.epsilon :
-                                           hitPoint - N * scene.epsilon;
+                                           hitPoint - N * scene.epsilon; // 计算阴影光线的起点
                 // [comment]
                 // Loop over all lights in the scene and sum their contribution up
                 // We also apply the lambert cosine law
                 // [/comment]
-                for (auto& light : scene.get_lights()) {
-                    Vector3f lightDir = light->position - hitPoint;
+                for (auto& light : scene.get_lights()) { // 遍历场景中的所有光源
+                    Vector3f lightDir = light->position - hitPoint; // 光源方向
                     // square of the distance between hitPoint and the light
-                    float lightDistance2 = dotProduct(lightDir, lightDir);
+                    float lightDistance2 = dotProduct(lightDir, lightDir); // 光源距离的平方
                     lightDir = normalize(lightDir);
-                    float LdotN = std::max(0.f, dotProduct(lightDir, N));
+                    float LdotN = std::max(0.f, dotProduct(lightDir, N)); // 光源方向和法线的点积
                     // is the point in shadow, and is the nearest occluding object closer to the object than the light itself?
-                    auto shadow_res = trace(shadowPointOrig, lightDir, scene.get_objects());
-                    bool inShadow = shadow_res && (shadow_res->tNear * shadow_res->tNear < lightDistance2);
+                    auto shadow_res = trace(shadowPointOrig, lightDir, scene.get_objects()); // 计算阴影光线是否与物体相交
+                    bool inShadow = shadow_res && (shadow_res->tNear * shadow_res->tNear < lightDistance2); // 如果阴影光线与物体相交，且阴影光线与物体的距离小于光源与物体的距离，则说明物体在阴影中
 
                     lightAmt += inShadow ? 0 : light->intensity * LdotN;
-                    Vector3f reflectionDirection = reflect(-lightDir, N);
+                    Vector3f reflectionDirection = reflect(-lightDir, N); // 计算反射方向
 
                     specularColor += powf(std::max(0.f, -dotProduct(reflectionDirection, dir)),
-                        payload->hit_obj->specularExponent) * light->intensity;
+                        payload->hit_obj->specularExponent) * light->intensity; // 计算镜面反射光照
                 }
 
-                hitColor = lightAmt * payload->hit_obj->evalDiffuseColor(st) * payload->hit_obj->Kd + specularColor * payload->hit_obj->Ks;
+                hitColor = lightAmt * payload->hit_obj->evalDiffuseColor(st) * payload->hit_obj->Kd + specularColor * payload->hit_obj->Ks; // 混合漫反射光照和镜面反射光照
                 break;
             }
         }
@@ -210,10 +210,10 @@ Vector3f castRay(
 // [/comment]
 void Renderer::Render(const Scene& scene)
 {
-    std::vector<Vector3f> framebuffer(scene.width * scene.height);
+    std::vector<Vector3f> framebuffer(scene.width * scene.height); // 帧缓冲区，存储每个像素的颜色
 
-    float scale = std::tan(deg2rad(scene.fov * 0.5f));
-    float imageAspectRatio = scene.width / (float)scene.height;
+    float scale = std::tan(deg2rad(scene.fov * 0.5f)); 
+    float imageAspectRatio = scene.width / (float)scene.height; // 图像宽高比
 
     // Use this variable as the eye position to start your rays.
     Vector3f eye_pos(0);
@@ -230,6 +230,13 @@ void Renderer::Render(const Scene& scene)
             // Also, don't forget to multiply both of them with the variable *scale*, and
             // x (horizontal) variable with the *imageAspectRatio*     
 
+            // 像素 (i, j) 是针对光栅化空间而言的，而不是针对图像空间，所以需要转换。即从 3D 空间转换到 2D 平面（作业1）的逆变换。
+            // 首先将原本的像素坐标转换到 [0, 1] 的范围内，即除以宽高，然后改变坐标轴的位置将原点移动到图像中心
+            // 水平方向上 i = 0 时，x = -1，i = width - 1 时，x = 1，所以 x = (2 * (i + 0.5) / width - 1)
+            // 垂直方向上 j = 0 时，y = 1，j = height - 1 时，y = -1，所以 y = (-2 * (j + 0.5) / height + 1)
+            // 此时横纵坐标均分布在 [-1,1] ，但是这并不是世界坐标下图像真实映射过来的位置。
+            // 根据 scale 的定义：垂直高度 y 和深度 z 的绝对值比值，而 z 又在下面的 dir 中为 -1，所以 scale 即为原本的图像高度，
+            // 而现在的图像高度为 1，所以令 x, y 同时乘以 scale 即可得到原始世界坐标下的坐标。
             x = (2 * (i + 0.5) / (float)scene.width - 1) * imageAspectRatio * scale;
             y = (-2 * (j + 0.5) / (float)scene.height + 1) * scale;       
 
