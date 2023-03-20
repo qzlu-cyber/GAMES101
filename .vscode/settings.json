@@ -1,3 +1,7 @@
 {
-    "cmake.sourceDirectory": "${workspaceFolder}/Assign01"
+    "cmake.sourceDirectory": "${workspaceFolder}/Assignment5/Code",
+    "files.associations": {
+        "*.tcc": "cpp",
+        "vector": "cpp"
+    }
 }

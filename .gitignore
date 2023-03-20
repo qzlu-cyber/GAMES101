@@ -41,6 +41,9 @@
 # CMake
 cmake-build-*/
 
+#vscode
+.vscode/
+
 # Mongo Explorer plugin
 .idea/**/mongoSettings.xml
 
